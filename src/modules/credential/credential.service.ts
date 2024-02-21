@@ -5,7 +5,7 @@ import { CronJob } from 'cron';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Credential } from './entities/credential.entity';
+import { CredentialEntity } from './entities/credential.entity';
 import * as dotenv from 'dotenv';
 import { HttpService } from '@nestjs/axios';
 
@@ -19,8 +19,8 @@ export class CredentialService {
   constructor(
     private readonly httpService: HttpService,
     private readonly schedulerRegistry: SchedulerRegistry,
-    @InjectRepository(Credential)
-    private readonly credentialRepository: Repository<Credential>,
+    @InjectRepository(CredentialEntity)
+    private readonly credentialRepository: Repository<CredentialEntity>,
   ) {
     // Agrega el código para obtener las credenciales al iniciar el servidor
     this.initTokens();
