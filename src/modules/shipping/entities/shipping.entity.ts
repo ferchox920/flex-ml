@@ -5,22 +5,22 @@ export class ShippingEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   type: string;
 
-  @Column({ name: 'deliver_to', nullable: true })
+  @Column({ name: 'deliver_to', nullable: false })
   deliverTo: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   status: string;
 
-  @Column({ name: 'site_id', nullable: true })
+  @Column({ name: 'site_id', nullable: false })
   siteId: string;
 
-  @Column('jsonb', { name: 'free_options', nullable: true })
+  @Column('jsonb', { name: 'free_options', nullable: false })
   freeOptions: string[];
 
   @Column('jsonb', { name: 'shipping_modes', nullable: true })
@@ -38,6 +38,6 @@ export class ShippingEntity {
   @Column({ name: 'max_time', nullable: true })
   maxTime: number | null;
 
-  @Column({ name: 'currency_id',  nullable: true  })
+  @Column({ name: 'currency_id', nullable: false })
   currencyId: string;
 }

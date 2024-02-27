@@ -1,15 +1,18 @@
-// shipping.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+
 import { ShippingEntity } from './entities/shipping.entity';
-import { ShippingController } from './shipping.controller';
 import { ShippingService } from './shipping.service';
-import { CredentialModule } from '../credential/credential.module'; // Importa el módulo CredentialModule aquí
-import { CredentialService } from '../credential/credential.service';
+import { ShippingController } from './shipping.controller';
+import { HttpModule } from '@nestjs/axios';
+import { CredentialModule } from '../credential/credential.module';
+
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ShippingEntity]), CredentialModule], // Usa TypeOrmModule.forFeature para las entidades
+  imports: [TypeOrmModule.forFeature([ShippingEntity,]), HttpModule,CredentialModule],
+  providers: [ShippingService],
   controllers: [ShippingController],
-  providers: [ShippingService], // Agrega CredentialService a providers
+  exports: [ShippingService],
 })
 export class ShippingModule {}

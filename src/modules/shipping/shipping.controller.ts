@@ -12,10 +12,10 @@ export class ShippingController {
   //   return this.shippingService.create(createShippingDto);
   // }
 
-  // @Get()
-  // findAll() {
-  //   return this.shippingService.findAll();
-  // }
+  @Get()
+  findAll() {
+    return this.shippingService.getShippingByApi();
+  }
 
   // @Get(':id')
   // findOne(@Param('id') id: string) {

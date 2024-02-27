@@ -1,5 +1,4 @@
-
-import { Injectable,  } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import { CronJob } from 'cron';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -27,9 +26,9 @@ export class CredentialService {
 
     // Configura el cron job para refrescar las credenciales cada 5 horas
     const job = new CronJob('0 0 */5 * * *', async () => {
-      await this.refreshTokens();
+      await this.refreshTokens(this.refreshToken);
     });
-    
+
     // Registra el cron job en el sistema de cron de NestJS
     this.schedulerRegistry.addCronJob('refreshTokens', job);
     job.start();
@@ -38,28 +37,15 @@ export class CredentialService {
   private async initTokens() {
     try {
       // Intenta cargar las credenciales desde la base de datos
-      const storedCredentials = await this.credentialRepository.find();
-      const storedCredential = storedCredentials.length > 0 ? storedCredentials[0] : null;
-      
 
+      const storedCredential = await this.getCrendentials();
 
-      if (storedCredential) {
-        this.accessToken = storedCredential.accessToken;
-        this.refreshToken = storedCredential.refreshToken;
+      if (storedCredential && storedCredential.refreshToken) {
+        // Si hay un refreshToken, intenta refrescar los tokens
+        await this.refreshTokens(storedCredential.refreshToken);
       } else {
-        console.log('aqui en crear token');
-        
-        // Si no hay credenciales almacenadas, obtén nuevas credenciales y guárdalas en la base de datos
-        const response = await this.httpService.post(
-          'https://api.mercadolibre.com/oauth/token',
-          {
-            grant_type: 'authorization_code',
-            client_id: process.env.CLIENT_ID,
-            client_secret: process.env.CLIENT_SECRET,
-            code: process.env.CODE,
-            redirect_uri: process.env.REDIRECT_URI,
-          }
-        ).toPromise();
+        // Si no hay refreshToken o no se puede refrescar, obtén nuevas credenciales y guárdalas en la base de datos
+        const response = await this.requestNewTokens();
 
         this.accessToken = response.data.access_token;
         this.refreshToken = response.data.refresh_token;
@@ -72,23 +58,62 @@ export class CredentialService {
         await this.credentialRepository.save(newCredential);
       }
     } catch (error) {
-      console.error('Error al obtener o guardar las credenciales:', error.message);
-      if (error.response) {
-        console.error('Respuesta de la API:', error.response.data);
-      }
-      throw error;
+      this.handleError('Error al obtener o guardar las credenciales:', error);
     }
   }
 
-  getAccessToken(): string {
-    return this.accessToken;
+  private async requestNewTokens(): Promise<AxiosResponse<any>> {
+    try {
+      return await this.httpService
+        .post('https://api.mercadolibre.com/oauth/token', {
+          grant_type: 'authorization_code',
+          client_id: process.env.CLIENT_ID,
+          client_secret: process.env.CLIENT_SECRET,
+          code: process.env.CODE,
+          redirect_uri: process.env.REDIRECT_URI,
+        })
+        .toPromise();
+    } catch (error) {
+      this.handleError('Error al solicitar nuevas credenciales:', error);
+    }
   }
 
-  getRefreshToken(): string {
-    return this.refreshToken;
+  private async handleError(message: string, error: any): Promise<void> {
+    console.error(message, error.message);
+    if (error.response) {
+      console.error('Respuesta de la API:', error.response.data);
+    }
+    throw error;
+  }
+  async getCrendentials(): Promise<CredentialEntity | null> {
+    const storedCredentials = await this.credentialRepository.find();
+    const storedCredential =
+      storedCredentials.length > 0 ? storedCredentials[0] : null;
+
+    return storedCredential;
   }
 
-  async refreshTokens(): Promise<AxiosResponse<any>> {
+  async getAccessToken(): Promise<string | null> {
+    const storedCredentials = await this.credentialRepository.find();
+    const storedCredential = storedCredentials.length > 0 ? storedCredentials[0] : null;
+  
+    if (storedCredential) {
+      return storedCredential.accessToken;
+    } else {
+      return null;
+    }
+  }
+  
+
+  async getRefreshToken(): Promise<string | null> {
+    const storedCredentials = await this.credentialRepository.find();
+    const storedCredential =
+      storedCredentials.length > 0 ? storedCredentials[0] : null;
+
+    return storedCredential ? storedCredential.refreshToken : null;
+  }
+
+  async refreshTokens(refreshToken: string): Promise<AxiosResponse<any>> {
     try {
       console.log('aqui en refrescar token');
       const response = await this.httpService.post(
@@ -97,31 +122,24 @@ export class CredentialService {
           grant_type: 'refresh_token',
           client_id: process.env.CLIENT_ID,
           client_secret: process.env.CLIENT_SECRET,
-          refresh_token: this.refreshToken,
+          refresh_token: refreshToken,
         }
       ).toPromise();
-
+  
       this.accessToken = response.data.access_token;
       this.refreshToken = response.data.refresh_token;
-
-      // Actualiza las credenciales en la base de datos
-      const storedCredentials = await this.credentialRepository.find();
-      const storedCredential = storedCredentials.length > 0 ? storedCredentials[0] : null;
-      
-
-      if (storedCredential) {
-        storedCredential.accessToken = this.accessToken;
-        storedCredential.refreshToken = this.refreshToken;
-        await this.credentialRepository.save(storedCredential);
-      }
-
+  
+      // Actualiza directamente en la base de datos sin buscar previamente
+      await this.credentialRepository.update({}, {
+        accessToken: this.accessToken,
+        refreshToken: this.refreshToken,
+      });
+  
       return response;
     } catch (error) {
-      console.error('Error al refrescar los tokens:', error.message);
-      if (error.response) {
-        console.error('Respuesta de la API:', error.response.data);
-      }
+      this.handleError('Error al refrescar los tokens:', error);
       throw error;
     }
   }
+  
 }
