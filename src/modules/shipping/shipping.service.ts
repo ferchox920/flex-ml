@@ -26,20 +26,18 @@ export class ShippingService implements OnModuleInit {
       if (validator && validator.length > 0) {
         return;
       }
-  
+
       const accessToken = await this.credentialService.getAccessToken();
-      const response = await this.httpService.get(
-        'https://api.mercadolibre.com/sites/MLA/shipping_methods',
-        {
+      const response = await this.httpService
+        .get('https://api.mercadolibre.com/sites/MLA/shipping_methods', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        },
-      ).toPromise();
-  
+        })
+        .toPromise();
+
       const shippingOptions = response.data;
-  
-      // Guardar cada objeto individualmente en la base de datos
+
       for (const option of shippingOptions) {
         const {
           id,
@@ -56,9 +54,9 @@ export class ShippingService implements OnModuleInit {
           max_time: maxTime,
           currency_id: currencyId,
         } = option;
-  
+
         const create = this.shippingRepository.create({
-          id,
+          idMl: id,
           name,
           type,
           deliverTo,
@@ -72,39 +70,69 @@ export class ShippingService implements OnModuleInit {
           maxTime,
           currencyId,
         });
-  
+
         await this.shippingRepository.save(create);
       }
-  
+
       console.log('Shipping options seeded successfully.');
     } catch (error) {
       console.error('Error seeding shipping options:', error.message || error);
     }
   }
-  
-  async getAllShipping() {
-    return await this.shippingRepository.find();
-  }
 
-  async getShippingByApi() {
+  async getAllShipping(): Promise<ShippingEntity[] | null | Error> {
     try {
-      const accessToken = await this.credentialService.getAccessToken();
-
-      const response = await this.httpService.get(
-        'https://api.mercadolibre.com/sites/MLA/shipping_methods',
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      ).toPromise();
-
-      const data = response.data;
-      console.log(data);
-      
+      const allShipping = await this.shippingRepository.find();
+      return allShipping || null;
     } catch (error) {
-      console.error('Error fetching shipping options from API:', error.message || error);
+      console.error('Error getting all shipping:', error.message || error);
       throw error;
     }
   }
+
+  async getShippingByIdMl(id: string): Promise<ShippingEntity | null | Error> {
+    try {
+      const shipping = await this.shippingRepository.findOne({
+        where: { idMl: id },
+      });
+
+      return shipping || null;
+    } catch (error) {
+      console.error('Error getting shipping by id:', error.message || error);
+      throw error;
+    }
+  }
+
+  async getShippingById(id: string): Promise<ShippingEntity | null | Error> {
+    try {
+      const shipping = await this.shippingRepository.findOne({ where: { id } });
+      return shipping || null;
+    } catch (error) {
+      console.error('Error getting shipping by id:', error.message || error);
+      throw error;
+    }
+  }
+
+  // async getShippingByApi() {
+  //   try {
+  //     const accessToken = await this.credentialService.getAccessToken();
+
+  //     const response = await this.httpService
+  //       .get('https://api.mercadolibre.com/sites/MLA/shipping_methods', {
+  //         headers: {
+  //           Authorization: `Bearer ${accessToken}`,
+  //         },
+  //       })
+  //       .toPromise();
+
+  //     const data = response.data;
+  //     console.log(data);
+  //   } catch (error) {
+  //     console.error(
+  //       'Error fetching shipping options from API:',
+  //       error.message || error,
+  //     );
+  //     throw error;
+  //   }
+  // }
 }

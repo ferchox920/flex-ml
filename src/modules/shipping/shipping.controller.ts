@@ -1,34 +1,57 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ShippingService } from './shipping.service';
 import { CreateShippingDto } from './dto/create-shipping.dto';
 import { UpdateShippingDto } from './dto/update-shipping.dto';
+import { ShippingEntity } from './entities/shipping.entity';
 
 @Controller('shipping')
 export class ShippingController {
   constructor(private readonly shippingService: ShippingService) {}
 
-  // @Post()
-  // create(@Body() createShippingDto: CreateShippingDto) {
-  //   return this.shippingService.create(createShippingDto);
-  // }
-
-  @Get()
-  findAll() {
-    return this.shippingService.getShippingByApi();
+  async findAll(): Promise<ShippingEntity[] | Error> {
+    try {
+      const allShipping = await this.shippingService.getAllShipping();
+      return allShipping;
+    } catch (error) {
+      console.error('Error retrieving all shipping:', error.message || error);
+      throw new Error('Error retrieving all shipping');
+    }
   }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.shippingService.findOne(+id);
-  // }
+  @Get(':id')
+  async getShippingById(
+    @Param('id') id: string,
+  ): Promise<ShippingEntity | null | Error> {
+    try {
+      const shipping = await this.shippingService.getShippingById(id);
+      return shipping;
+    } catch (error) {
+      console.error('Error retrieving shipping by id:', error.message || error);
+      throw new Error('Error retrieving shipping by id'); 
+    }
+  }
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateShippingDto: UpdateShippingDto) {
-  //   return this.shippingService.update(+id, updateShippingDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.shippingService.remove(+id);
-  // }
+  @Get('/byIdMl/:idMl')
+  async getShippingByIdMl(
+    @Param('idMl') idMl: string,
+  ): Promise<ShippingEntity | null | Error> {
+    try {
+      const shipping = await this.shippingService.getShippingByIdMl(idMl);
+      return shipping;
+    } catch (error) {
+      console.error(
+        'Error retrieving shipping by idMl:',
+        error.message || error,
+      );
+      throw new Error('Error retrieving shipping by idMl'); 
+    }
+  }
 }

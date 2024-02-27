@@ -2,8 +2,12 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
 export class ShippingEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+
+  @Column({ nullable: false })
+  idMl:string
 
   @Column({ nullable: false })
   name: string;
