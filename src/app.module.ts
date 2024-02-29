@@ -6,14 +6,15 @@ import { dataSourceOptions } from 'db/data-source';
 import { CredentialModule } from './modules/credential/credential.module';
 import { ProductModule } from './modules/product/product.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
-import { ShippingService } from './modules/shipping/shipping.service'; // Importa el servicio
+import { ShippingService } from './modules/shipping/shipping.service';
 import { ShippingEntity } from './modules/shipping/entities/shipping.entity';
 import { HttpModule } from '@nestjs/axios';
- // Importa la entidad
+import { UsersModule } from './modules/users/users.module';
+import { EcommercesModule } from './modules/ecommerces/ecommerces.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forRoot(dataSourceOptions), CredentialModule, ProductModule,HttpModule, ShippingModule, TypeOrmModule.forFeature([ShippingEntity])], // Agrega TypeOrmModule.forFeature para incluir la entidad
-  controllers: [AppController],
-  providers: [AppService, ShippingService], // Agrega ShippingService a la lista de providers
+  imports: [TypeOrmModule.forRoot(dataSourceOptions), CredentialModule, ProductModule,HttpModule, ShippingModule, TypeOrmModule.forFeature([ShippingEntity]), UsersModule, EcommercesModule, AuthModule], 
+  providers: [AppService, ShippingService], 
 })
 export class AppModule {}

@@ -1,7 +1,16 @@
-// credential.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { EcommerceEntity } from 'src/modules/ecommerces/entities/ecommerce.entity';
 
-@Entity()
+@Entity('credentials')
 export class CredentialEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -12,11 +21,21 @@ export class CredentialEntity {
   @Column()
   refreshToken: string;
 
-  // Otros campos que puedas necesitar
+  @OneToOne(() => EcommerceEntity, (ecommerce) => ecommerce.credential)
+  @JoinColumn({ name: 'ecommerce_id' })
+  ecommerce: EcommerceEntity;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
+
+  @Exclude()
+  @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt?: Date;
+
+  constructor(partial: Partial<CredentialEntity>) {
+    Object.assign(this, partial);
+  }
 }

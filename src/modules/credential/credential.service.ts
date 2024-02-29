@@ -21,17 +21,17 @@ export class CredentialService {
     @InjectRepository(CredentialEntity)
     private readonly credentialRepository: Repository<CredentialEntity>,
   ) {
-    // Agrega el código para obtener las credenciales al iniciar el servidor
-    this.initTokens();
+    // // Agrega el código para obtener las credenciales al iniciar el servidor
+    // this.initTokens();
 
-    // Configura el cron job para refrescar las credenciales cada 5 horas
-    const job = new CronJob('0 0 */5 * * *', async () => {
-      await this.refreshTokens(this.refreshToken);
-    });
+    // // Configura el cron job para refrescar las credenciales cada 5 horas
+    // const job = new CronJob('0 0 */5 * * *', async () => {
+    //   await this.refreshTokens(this.refreshToken);
+    // });
 
-    // Registra el cron job en el sistema de cron de NestJS
-    this.schedulerRegistry.addCronJob('refreshTokens', job);
-    job.start();
+    // // Registra el cron job en el sistema de cron de NestJS
+    // this.schedulerRegistry.addCronJob('refreshTokens', job);
+    // job.start();
   }
 
   private async initTokens() {
