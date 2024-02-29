@@ -12,9 +12,10 @@ import { UsersModule } from './modules/users/users.module';
 import { EcommercesModule } from './modules/ecommerces/ecommerces.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
-  imports: [TypeOrmModule.forRoot(dataSourceOptions), CredentialModule, HttpModule, ShippingModule, TypeOrmModule.forFeature([ShippingEntity]), UsersModule, EcommercesModule, AuthModule, OrdersModule], 
+  imports: [TypeOrmModule.forRoot(dataSourceOptions), CredentialModule, HttpModule, ShippingModule, TypeOrmModule.forFeature([ShippingEntity]), UsersModule, EcommercesModule, AuthModule, OrdersModule, AdminModule], 
   providers: [AppService, ShippingService], 
 })
 export class AppModule {}

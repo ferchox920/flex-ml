@@ -10,47 +10,25 @@ import { Repository } from 'typeorm';
 import { Roles } from 'src/utils/common/roles-enum';
 import { JwtPayload } from './interface/jwt-payload.interface';
 import { TokenTypes } from 'src/utils/common/token-types.enum';
+import { AdminService } from '../admin/admin.service';
 
 @Injectable()
-export class AuthService
- {
+export class AuthService {
   constructor(
     @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
-    // @InjectRepository(AdminEntity)
-    // private readonly adminRepository: Repository<AdminEntity>,
     private readonly usersService: UsersService,
-    // private readonly adminService: AdminService,
+    private readonly adminService: AdminService,
     private readonly jwtService: JwtService,
-    private config: ConfigService
+    private config: ConfigService,
   ) {}
   async login(user: JwtPayload) {
-    let profile: UserEntity ;
-
-    console.log('asdasd');
-    console.log(user);
-    
-
-    // switch (user.roles) {
-    //   case Roles.USER:
-    //     profile = await this.userRepository.findOne({ where: { id: user.id } });
-    //     break;
-
-    //   // case Roles.ADMIN:
-    //   //   profile = await this.adminRepository.findOne({
-    //   //     where: { id: user.id },
-    //   //   });
-    //   //   break;
-     
-
-    //   default:
-    //     throw new Error('Invalid role');
-    // }
+    if (!user) {
+      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+    }
 
     const credential = await this.authGenericResponse(user);
-
     return {
-      profile,
+      user,
       credential,
     };
   }
@@ -64,8 +42,8 @@ export class AuthService
       expirationTime: this.calculateExpirationTime(),
       id: user?.id,
       email: user?.email,
-      roles:Roles.USER
-  }
+      roles: Roles.USER,
+    };
   }
   async getProfile(id: string) {
     const user = await this.usersService.findById(id);
@@ -73,19 +51,23 @@ export class AuthService
     return user;
   }
   private calculateExpirationTime() {
-    const expiresIn = this.config.get('JWT_EXPIRATION_TIME').replace(/[^\d.-]/g, '');
+    const expiresIn = this.config
+      .get('JWT_EXPIRATION_TIME')
+      .replace(/[^\d.-]/g, '');
     const timeNow = new Date();
-    const expirationTokenTime = new Date(timeNow.getTime() + +(1000 * parseInt(expiresIn)));
+    const expirationTokenTime = new Date(
+      timeNow.getTime() + +(1000 * parseInt(expiresIn)),
+    );
     return expirationTokenTime;
   }
 
   private generateToken(
-    user: JwtPayload | UserEntity ,
+    user: JwtPayload | UserEntity,
     type: TokenTypes,
     config?: {
       secret?: string;
       expiresIn?: string;
-    }
+    },
   ) {
     const commonPayload: Object = {
       userType: Roles.USER,
@@ -104,13 +86,12 @@ export class AuthService
   }
 
   async validate(email: string, password: string, type: string): Promise<any> {
-    let payload = { email, password, type}
+    let payload = { email, password, type };
     switch (type) {
       case Roles.USER:
         return await this.usersService.login(payload);
-      // case Roles.ADMIN:
-      //   return await this.adminService.login(payload);
-      
+      case Roles.ADMIN:
+        return await this.adminService.login(payload);
     }
     throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
   }

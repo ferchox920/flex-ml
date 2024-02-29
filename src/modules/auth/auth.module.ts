@@ -8,11 +8,13 @@ import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { LocalStrategy } from './strategy/local.strategy';
 import { JwtStrategy } from './strategy/jwt.strategy';
+import { AdminModule } from '../admin/admin.module';
 
 @Module({
   imports: [
     ConfigModule,
     UsersModule,
+    AdminModule,
     TypeOrmModule.forFeature([UserEntity]),
     JwtModule.register({
       secret: process.env.ACCESS_TOKEN_SECRET_KEY,

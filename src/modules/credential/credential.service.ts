@@ -37,19 +37,13 @@ export class CredentialService {
     if (!ecommerce) {
       throw new NotFoundException('Ecommerce not found');
     }
-  
-    console.log('asdasdasd');
-    console.log(ecommerce);
-  
+
     const existingCredential = await this.credentialRepository
     .createQueryBuilder('credential')
     .leftJoinAndSelect('credential.ecommerce', 'ecommerce')
     .where('ecommerce.id = :id', { id: ecommerce.id })
     .getOne();
 
-  
- 
-  
     const response = await this.requestNewTokens(ecommerce);
   
     if (existingCredential) {
@@ -60,7 +54,7 @@ export class CredentialService {
       return existingCredential;
     }
 
-    // Create a new credential if none exists
+
     const newCredential = this.credentialRepository.create({
       accessToken: response.data.access_token,
       refreshToken: response.data.refresh_token,
