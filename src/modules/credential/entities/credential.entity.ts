@@ -12,8 +12,8 @@ import { EcommerceEntity } from 'src/modules/ecommerces/entities/ecommerce.entit
 
 @Entity('credentials')
 export class CredentialEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   accessToken: string;

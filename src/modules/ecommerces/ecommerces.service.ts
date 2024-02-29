@@ -5,6 +5,7 @@ import { UserEntity } from '../users/entities/user.entity';
 import { EcommerceEntity } from './entities/ecommerce.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CredentialService } from '../credential/credential.service';
 
 @Injectable()
 export class EcommercesService {
@@ -13,6 +14,7 @@ export class EcommercesService {
     private readonly ecommerceRepository: Repository<EcommerceEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    private readonly credentialService: CredentialService,
   ) {}
 
   async createEcommerce(
@@ -44,7 +46,7 @@ export class EcommercesService {
   
     const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${ecommerce[0].appId}&redirect_uri=${ecommerce[0].redirectUri}`;
   
-    console.log(url);
+    
     
     return url;
   }
@@ -59,8 +61,10 @@ export class EcommercesService {
     ecommerce.code = params.code;
 
     await this.ecommerceRepository.save(ecommerce);
-  
-    return ecommerce;
+
+    const credential = await this.credentialService.createToken(ecommerce);
+
+    return credential;
   }
   
   
