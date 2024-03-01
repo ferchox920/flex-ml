@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import { CronJob } from 'cron';
 // import { SchedulerRegistry } from '@nestjs/schedule';
@@ -32,41 +37,78 @@ export class CredentialService {
     // this.schedulerRegistry.addCronJob('refreshTokens', job);
     // job.start();
   }
-
-  async createToken(ecommerce: EcommerceEntity) {
+  async createToken(ecommerce: EcommerceEntity): Promise<CredentialEntity> {
     if (!ecommerce) {
       throw new NotFoundException('Ecommerce not found');
     }
-
-    const existingCredential = await this.credentialRepository
-    .createQueryBuilder('credential')
-    .leftJoinAndSelect('credential.ecommerce', 'ecommerce')
-    .where('ecommerce.id = :id', { id: ecommerce.id })
-    .getOne();
-
-    const response = await this.requestNewTokens(ecommerce);
   
-    if (existingCredential) {
-      await this.credentialRepository.update(existingCredential.id, {
-        accessToken: response.data.access_token,
-        refreshToken: response.data.refresh_token,
-      });
-      return existingCredential;
+    let existingCredential: CredentialEntity | undefined;
+  
+    try {
+      existingCredential = await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.ecommerce', 'ecommerce')
+        .where('ecommerce.id = :id', { id: ecommerce.id })
+        .getOne();
+  
+      let response: AxiosResponse | undefined;
+  
+      try {
+        response = await this.httpService
+          .post('https://api.mercadolibre.com/oauth/token', {
+            grant_type: 'authorization_code',
+            client_id: ecommerce.appId,
+            client_secret: ecommerce.clientSecret,
+            code: ecommerce.code,
+            redirect_uri: ecommerce.redirectUri,
+          })
+          .toPromise();
+  
+      } catch (error) {
+        if (error.response && error.response.status === 400) {
+          // Handle the specific error caused by invalid or expired tokens
+          console.error('Invalid or expired tokens:', error.response.data);
+          throw new BadRequestException('Invalid or expired tokens');
+        } else {
+          // For other errors, rethrow the original error
+          throw error;
+        }
+      }
+  
+      if (response && existingCredential) {
+        // Update existing credential
+        await this.credentialRepository.update(existingCredential.id, {
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
+        });
+        existingCredential = await this.credentialRepository.findOneOrFail({
+          where: { id: existingCredential.id },
+        });
+      } else if (response) {
+        // Create new credential
+        const newCredential = this.credentialRepository.create({
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
+          ecommerce: ecommerce,
+        });
+  
+        existingCredential = await this.credentialRepository.save(newCredential);
+      }
+  
+    } catch (error) {
+      console.error('Error in createToken:', error);
+      throw new InternalServerErrorException(
+        'Error creating or updating credential',
+      );
     }
-
-
-    const newCredential = this.credentialRepository.create({
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      ecommerce: ecommerce,
-    });
-
-    console.log(newCredential);
-
-    await this.credentialRepository.save(newCredential);
-
-    return newCredential;
+  
+    if (!existingCredential) {
+      throw new InternalServerErrorException('Error creating or updating credential');
+    }
+  
+    return existingCredential;
   }
+  
 
   private async requestNewTokens(
     ecommerce: EcommerceEntity,
@@ -82,7 +124,14 @@ export class CredentialService {
         })
         .toPromise();
     } catch (error) {
-      this.handleError('Error al solicitar nuevas credenciales:', error);
+      if (error.response && error.response.status === 400) {
+        // Handle the specific error caused by invalid or expired tokens
+        console.error('Invalid or expired tokens:', error.response.data);
+        throw new BadRequestException('Invalid or expired tokens');
+      } else {
+        // For other errors, rethrow the original error
+        throw error;
+      }
     }
   }
 

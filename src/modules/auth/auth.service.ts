@@ -76,7 +76,6 @@ export class AuthService {
       id: user.id,
       roles: Roles.USER,
     };
-
     const options: JwtSignOptions = {
       expiresIn: config?.expiresIn || this.config.get('JWT_EXPIRATION_TIME'),
       secret: config?.secret || this.config.get('JWT_SECRET'),

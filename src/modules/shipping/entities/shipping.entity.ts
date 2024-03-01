@@ -2,46 +2,35 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
 export class ShippingEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
 
 
-  @Column({ nullable: false })
-  idMl:string
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ nullable: false })
-  name: string;
-
-  @Column({ nullable: false })
-  type: string;
-
-  @Column({ name: 'deliver_to', nullable: false })
-  deliverTo: string;
-
-  @Column({ nullable: false })
+  @Column()
   status: string;
 
-  @Column({ name: 'site_id', nullable: false })
-  siteId: string;
+  @Column()
+  shipping_status: string;
 
-  @Column('jsonb', { name: 'free_options', nullable: false })
-  freeOptions: string[];
+  @Column()
+  tracking_number: string;
 
-  @Column('jsonb', { name: 'shipping_modes', nullable: true })
-  shippingModes: string[] | null;
+  @Column()
+  shipping_method: string;
 
-  @Column({ name: 'company_id', nullable: true })
-  companyId: number | null;
+  @Column()
+  order_id: number;
 
-  @Column({ name: 'company_name', nullable: true })
-  companyName: string | null;
+  @Column()
+  order_cost: number;
 
-  @Column({ name: 'min_time', nullable: true })
-  minTime: number | null;
+  @Column()
+  base_cost: number;
 
-  @Column({ name: 'max_time', nullable: true })
-  maxTime: number | null;
+  @Column()
+  site_id: string;
 
-  @Column({ name: 'currency_id', nullable: false })
-  currencyId: string;
+  @Column()
+  created_at: Date;
 }

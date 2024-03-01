@@ -36,8 +36,7 @@ export class EcommercesService {
   }
 
   async createUrl(id: string) {
-    console.log(id);
-    
+
     const ecommerce = await this.ecommerceRepository.find();
     
     if (!ecommerce) {
