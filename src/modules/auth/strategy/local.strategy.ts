@@ -16,11 +16,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 
   async validate(req: any, email: string, password: string): Promise<unknown> {
     let type = req.body.type;
-
-
-
-
-  //TODO: logica de validacion de admin
+    
     
     const user = await this.authService.validate(email, password, type);
     if (!user) {

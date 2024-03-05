@@ -34,8 +34,7 @@ export class UsersService {
     return user;
   }
 
-  async login(loginDto: LoginDto): Promise<UserEntity> {
-    console.log('123123');
+  async login(loginDto: any): Promise<UserEntity> {
     
     const { email, password } = loginDto;
     const userExisting = await this.userRepository

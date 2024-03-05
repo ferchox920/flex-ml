@@ -14,8 +14,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   const options = new DocumentBuilder()
-  .setTitle('esthetic - Back End')
-  .setDescription('esthetic - Back End')
+  .setTitle('flex-ml - Back End')
+  .setDescription('flex-ml - Back End')
   .setVersion('1.0')
   .addBearerAuth()
   .build();

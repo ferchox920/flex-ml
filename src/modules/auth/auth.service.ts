@@ -1,21 +1,17 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
 import { Roles } from 'src/utils/common/roles-enum';
 import { JwtPayload } from './interface/jwt-payload.interface';
 import { TokenTypes } from 'src/utils/common/token-types.enum';
 import { AdminService } from '../admin/admin.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(UserEntity)
     private readonly usersService: UsersService,
     private readonly adminService: AdminService,
     private readonly jwtService: JwtService,
@@ -94,7 +90,6 @@ export class AuthService {
     }
     throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
   }
-
   async refreshToken(userId: string) {
     const user = await this.usersService.findById(userId);
     if (!user) {
