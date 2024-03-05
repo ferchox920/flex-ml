@@ -17,11 +17,17 @@ import { EcommercesService } from './ecommerces.service';
 import { CreateEcommerceDto } from './dto/create-ecommerce.dto';
 import { JwtPayload } from '../auth/interface/jwt-payload.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiTags, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 
+@ApiTags('ecommerces')
 @Controller('ecommerces')
 export class EcommercesController {
   constructor(private readonly ecommercesService: EcommercesService) {}
 
+  @ApiOperation({ summary: 'Create an ecommerce entity.' })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Return the created ecommerce entity.' })
+  @ApiBadRequestResponse({ description: 'Invalid data or missing required fields.' })
   @UseGuards(JwtAuthGuard)
   @Post()
   create(
@@ -33,6 +39,10 @@ export class EcommercesController {
       createEcommerceDto,
     );
   }
+
+  @ApiOperation({ summary: 'Create a fallback URL for an ecommerce entity.' })
+  @ApiResponse({ status: 302, description: 'Redirect to the created fallback URL.' })
+  @ApiBadRequestResponse({ description: 'Invalid ecommerce ID.' })
   @Post('create-code')
   async createCode(@Response() res, @Body() id: string) {
     try {
@@ -42,6 +52,10 @@ export class EcommercesController {
       throw new HttpException({ error }, HttpStatus.BAD_REQUEST);
     }
   }
+
+  @ApiOperation({ summary: 'Get code for an ecommerce entity.' })
+  @ApiResponse({ status: 200, description: 'Return the code for the specified ecommerce entity.' })
+  @ApiBadRequestResponse({ description: 'Invalid parameters or ecommerce not found.' })
   @Get('/code')
   async getCode(
     @Query() params: { params: string; code: string },
@@ -61,23 +75,10 @@ export class EcommercesController {
     }
   }
 
+  @ApiOperation({ summary: 'Get a list of all ecommerce entities.' })
+  @ApiResponse({ status: 200, description: 'Return a list of ecommerce entities.' })
   @Get()
   findAll() {
     return this.ecommercesService.findAll();
-    // }
-
-    // @Get(':id')
-    // findOne(@Param('id') id: string) {
-    //   return this.ecommercesService.findOne(+id);
-    // }
-
-    // @Patch(':id')
-    // update(@Param('id') id: string, @Body() updateEcommerceDto: UpdateEcommerceDto) {
-    //   return this.ecommercesService.update(+id, updateEcommerceDto);
-    // }
-
-    // @Delete(':id')
-    // remove(@Param('id') id: string) {
-    //   return this.ecommercesService.remove(+id);
   }
 }

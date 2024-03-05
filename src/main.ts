@@ -6,11 +6,22 @@ import * as bodyParser from 'body-parser';
 import * as morgan from 'morgan';
 import * as  compression from 'compression';
 import * as cookieParser from 'cookie-parser';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.setGlobalPrefix('api/v1');
+
+  const options = new DocumentBuilder()
+  .setTitle('esthetic - Back End')
+  .setDescription('esthetic - Back End')
+  .setVersion('1.0')
+  .addBearerAuth()
+  .build();
+
+const document = SwaggerModule.createDocument(app, options);
+SwaggerModule.setup('api/docs', app, document);
 
   app.use(
     bodyParser.json({
