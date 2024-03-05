@@ -1,13 +1,18 @@
-
-import { Injectable,  } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import { CronJob } from 'cron';
-import { SchedulerRegistry } from '@nestjs/schedule';
+// import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Credential } from './entities/credential.entity';
+import { CredentialEntity } from './entities/credential.entity';
 import * as dotenv from 'dotenv';
 import { HttpService } from '@nestjs/axios';
+import { EcommerceEntity } from '../ecommerces/entities/ecommerce.entity';
 
 dotenv.config();
 
@@ -18,109 +23,175 @@ export class CredentialService {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly schedulerRegistry: SchedulerRegistry,
-    @InjectRepository(Credential)
-    private readonly credentialRepository: Repository<Credential>,
+    @InjectRepository(EcommerceEntity)
+    private readonly ecommerceRepository: Repository<EcommerceEntity>,
+    @InjectRepository(CredentialEntity)
+    private readonly credentialRepository: Repository<CredentialEntity>,
   ) {
-    // Agrega el código para obtener las credenciales al iniciar el servidor
-    this.initTokens();
-
-    // Configura el cron job para refrescar las credenciales cada 5 horas
-    const job = new CronJob('0 0 */5 * * *', async () => {
-      await this.refreshTokens();
-    });
-    
-    // Registra el cron job en el sistema de cron de NestJS
-    this.schedulerRegistry.addCronJob('refreshTokens', job);
-    job.start();
+    // Comenté esta parte porque inicializar los tokens directamente podría no ser necesario en el constructor
+    // this.initTokens();
+    // Comenté la configuración del cron job ya que no estaba siendo utilizado en el código proporcionado
+    // const job = new CronJob('0 0 */5 * * *', async () => {
+    //   await this.refreshTokens(this.refreshToken);
+    // });
+    // this.schedulerRegistry.addCronJob('refreshTokens', job);
+    // job.start();
   }
-
-  private async initTokens() {
+  async createToken(ecommerce: EcommerceEntity): Promise<CredentialEntity> {
+    if (!ecommerce) {
+      throw new NotFoundException('Ecommerce not found');
+    }
+  
+    let existingCredential: CredentialEntity | undefined;
+  
     try {
-      // Intenta cargar las credenciales desde la base de datos
-      const storedCredentials = await this.credentialRepository.find();
-      const storedCredential = storedCredentials.length > 0 ? storedCredentials[0] : null;
-      
-
-
-      if (storedCredential) {
-        this.accessToken = storedCredential.accessToken;
-        this.refreshToken = storedCredential.refreshToken;
-      } else {
-        console.log('aqui en crear token');
-        
-        // Si no hay credenciales almacenadas, obtén nuevas credenciales y guárdalas en la base de datos
-        const response = await this.httpService.post(
-          'https://api.mercadolibre.com/oauth/token',
-          {
+      existingCredential = await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.ecommerce', 'ecommerce')
+        .where('ecommerce.id = :id', { id: ecommerce.id })
+        .getOne();
+  
+      let response: AxiosResponse | undefined;
+  
+      try {
+        response = await this.httpService
+          .post('https://api.mercadolibre.com/oauth/token', {
             grant_type: 'authorization_code',
-            client_id: process.env.CLIENT_ID,
-            client_secret: process.env.CLIENT_SECRET,
-            code: process.env.CODE,
-            redirect_uri: process.env.REDIRECT_URI,
-          }
-        ).toPromise();
-
-        this.accessToken = response.data.access_token;
-        this.refreshToken = response.data.refresh_token;
-
-        // Guarda las credenciales en la base de datos
-        const newCredential = this.credentialRepository.create({
-          accessToken: this.accessToken,
-          refreshToken: this.refreshToken,
+            client_id: ecommerce.appId,
+            client_secret: ecommerce.clientSecret,
+            code: ecommerce.code,
+            redirect_uri: ecommerce.redirectUri,
+          })
+          .toPromise();
+  
+      } catch (error) {
+        if (error.response && error.response.status === 400) {
+          // Handle the specific error caused by invalid or expired tokens
+          console.error('Invalid or expired tokens:', error.response.data);
+          throw new BadRequestException('Invalid or expired tokens');
+        } else {
+          // For other errors, rethrow the original error
+          throw error;
+        }
+      }
+  
+      if (response && existingCredential) {
+        // Update existing credential
+        await this.credentialRepository.update(existingCredential.id, {
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
         });
-        await this.credentialRepository.save(newCredential);
+        existingCredential = await this.credentialRepository.findOneOrFail({
+          where: { id: existingCredential.id },
+        });
+      } else if (response) {
+        // Create new credential
+        const newCredential = this.credentialRepository.create({
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
+          ecommerce: ecommerce,
+        });
+  
+        existingCredential = await this.credentialRepository.save(newCredential);
       }
+  
     } catch (error) {
-      console.error('Error al obtener o guardar las credenciales:', error.message);
-      if (error.response) {
-        console.error('Respuesta de la API:', error.response.data);
+      console.error('Error in createToken:', error);
+      throw new InternalServerErrorException(
+        'Error creating or updating credential',
+      );
+    }
+  
+    if (!existingCredential) {
+      throw new InternalServerErrorException('Error creating or updating credential');
+    }
+  
+    return existingCredential;
+  }
+  
+
+  private async requestNewTokens(
+    ecommerce: EcommerceEntity,
+  ): Promise<AxiosResponse<any>> {
+    try {
+      return await this.httpService
+        .post('https://api.mercadolibre.com/oauth/token', {
+          grant_type: 'authorization_code',
+          client_id: ecommerce.appId,
+          client_secret: ecommerce.clientSecret,
+          code: ecommerce.code,
+          redirect_uri: ecommerce.redirectUri,
+        })
+        .toPromise();
+    } catch (error) {
+      if (error.response && error.response.status === 400) {
+        // Handle the specific error caused by invalid or expired tokens
+        console.error('Invalid or expired tokens:', error.response.data);
+        throw new BadRequestException('Invalid or expired tokens');
+      } else {
+        // For other errors, rethrow the original error
+        throw error;
       }
-      throw error;
     }
   }
 
-  getAccessToken(): string {
-    return this.accessToken;
+  private async handleError(message: string, error: any): Promise<void> {
+    console.error(message, error.message);
+    if (error.response) {
+      console.error('Respuesta de la API:', error.response.data);
+    }
+    throw error;
   }
 
-  getRefreshToken(): string {
-    return this.refreshToken;
+  async getCrendentials(): Promise<CredentialEntity | null> {
+    const storedCredentials = await this.credentialRepository.find();
+    const storedCredential =
+      storedCredentials.length > 0 ? storedCredentials[0] : null;
+
+    return storedCredential;
   }
 
-  async refreshTokens(): Promise<AxiosResponse<any>> {
+  async getAccessToken(): Promise<string | null> {
+    const storedCredentials = await this.credentialRepository.find();
+    const storedCredential =
+      storedCredentials.length > 0 ? storedCredentials[0] : null;
+
+    return storedCredential ? storedCredential.accessToken : null;
+  }
+
+  async getRefreshToken(): Promise<string | null> {
+    const storedCredentials = await this.credentialRepository.find();
+    const storedCredential =
+      storedCredentials.length > 0 ? storedCredentials[0] : null;
+
+    return storedCredential ? storedCredential.refreshToken : null;
+  }
+
+  async refreshTokens(refreshToken: string): Promise<AxiosResponse<any>> {
     try {
-      console.log('aqui en refrescar token');
-      const response = await this.httpService.post(
-        'https://api.mercadolibre.com/oauth/token',
-        {
+      const response = await this.httpService
+        .post('https://api.mercadolibre.com/oauth/token', {
           grant_type: 'refresh_token',
           client_id: process.env.CLIENT_ID,
           client_secret: process.env.CLIENT_SECRET,
-          refresh_token: this.refreshToken,
-        }
-      ).toPromise();
+          refresh_token: refreshToken,
+        })
+        .toPromise();
 
       this.accessToken = response.data.access_token;
       this.refreshToken = response.data.refresh_token;
 
-      // Actualiza las credenciales en la base de datos
-      const storedCredentials = await this.credentialRepository.find();
-      const storedCredential = storedCredentials.length > 0 ? storedCredentials[0] : null;
-      
-
-      if (storedCredential) {
-        storedCredential.accessToken = this.accessToken;
-        storedCredential.refreshToken = this.refreshToken;
-        await this.credentialRepository.save(storedCredential);
-      }
+      await this.credentialRepository.update(
+        {},
+        {
+          accessToken: this.accessToken,
+          refreshToken: this.refreshToken,
+        },
+      );
 
       return response;
     } catch (error) {
-      console.error('Error al refrescar los tokens:', error.message);
-      if (error.response) {
-        console.error('Respuesta de la API:', error.response.data);
-      }
+      this.handleError('Error al refrescar los tokens:', error);
       throw error;
     }
   }
