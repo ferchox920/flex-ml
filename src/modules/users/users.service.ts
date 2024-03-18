@@ -1,4 +1,9 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from './entities/user.entity';
@@ -16,16 +21,22 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<UserEntity> {
     // Verificar si ya existe un usuario con el mismo correo electrónico
-    const existingUser = await this.userRepository.findOne({where:{ email: createUserDto.email }});
+    const existingUser = await this.userRepository.findOne({
+      where: { email: createUserDto.email },
+    });
     if (existingUser) {
       throw new BadRequestException('User with this email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    const newUser = this.userRepository.create({ ...createUserDto, password: hashedPassword });
+    const newUser = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+    });
 
-       return await this.userRepository.save(newUser);
+    await this.userRepository.save(newUser);
+    return newUser;
   }
 
   async findById(id: string): Promise<UserEntity> {
@@ -35,7 +46,6 @@ export class UsersService {
   }
 
   async login(loginDto: any): Promise<UserEntity> {
-    
     const { email, password } = loginDto;
     const userExisting = await this.userRepository
       .createQueryBuilder('users')
@@ -47,7 +57,7 @@ export class UsersService {
       throw new BadRequestException('User does not exist');
     }
 
-    if (!userExisting ) {
+    if (!userExisting) {
       throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
     }
 
@@ -59,7 +69,6 @@ export class UsersService {
 
     return userExisting;
   }
-
 
   findAll() {
     return this.userRepository.find();

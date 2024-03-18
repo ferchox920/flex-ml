@@ -14,9 +14,26 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [TypeOrmModule.forRoot(dataSourceOptions), CredentialModule, HttpModule, ShippingModule, TypeOrmModule.forFeature([ShippingEntity]), UsersModule, EcommercesModule, AuthModule, OrdersModule, AdminModule, ProfileModule], 
-  providers: [AppService, ShippingService], 
+  imports: [
+    ScheduleModule.forRoot(), // Importa y registra ScheduleModule
+    TypeOrmModule.forRoot(dataSourceOptions),
+    CredentialModule,
+    HttpModule,
+    ShippingModule,
+    TypeOrmModule.forFeature([ShippingEntity]),
+    UsersModule,
+    EcommercesModule,
+    AuthModule,
+    OrdersModule,
+    AdminModule,
+    ProfileModule,
+    JobsModule,
+    
+  ],
+  providers: [AppService, ShippingService],
 })
 export class AppModule {}

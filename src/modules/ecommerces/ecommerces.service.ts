@@ -16,7 +16,6 @@ export class EcommercesService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly credentialService: CredentialService,
-    private readonly httpService: HttpService,
   ) {}
 
   async createEcommerce(
@@ -24,6 +23,12 @@ export class EcommercesService {
     createEcommerceDto: CreateEcommerceDto,
   ): Promise<EcommerceEntity> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
+    const existinceEcommerce = await this.ecommerceRepository.findOne({
+      where: { appId: createEcommerceDto.appId },
+    });
+    if (existinceEcommerce) {
+      throw new NotFoundException('Ecommerce already exists');
+    }
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -34,7 +39,8 @@ export class EcommercesService {
       user,
     });
 
-    return await this.ecommerceRepository.save(ecommerce);
+    await this.ecommerceRepository.save(ecommerce);
+    return ecommerce;
   }
 
   async getUrlById(userId: string, id: string): Promise<string> {
@@ -42,36 +48,47 @@ export class EcommercesService {
       where: {
         id,
       },
-      relations: ['user'], 
+      relations: ['user'],
     });
-    
+
     if (!ecommerce || ecommerce.user.id !== userId) {
       throw new NotFoundException('Ecommerce not found for the user');
     }
-   
-    
-    const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${ecommerce.appId}&redirect_uri=${ecommerce.redirectUri}`;
-   
-    return url;
-   }
-   
 
-  async getCreate(params: { id: string; code: string }) {
+    const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${ecommerce.appId}&redirect_uri=${ecommerce.redirectUri}`;
+
+    return url;
+  }
+
+  async codeGenerate(params: { id: string; code: string }) {
     const ecommerce = await this.ecommerceRepository.findOne({
-      where: { appId: params.id },
+      where: { appId: params.id },relations:['credential']
     });
 
     if (!ecommerce) {
       throw new NotFoundException('Ecommerce not found');
     }
 
+    if (!ecommerce.code) {
+      ecommerce.code = params.code;
+
+      await this.ecommerceRepository.save(ecommerce);
+
+      const credential = await this.credentialService.newToken(ecommerce);
+
+      return credential;
+    }
+    if (ecommerce.credential && ecommerce.code == params.code) {
+      const response = await this.credentialService.refreshTokens(ecommerce);
+
+      return response;
+    }
     ecommerce.code = params.code;
 
     await this.ecommerceRepository.save(ecommerce);
+    const response = await this.credentialService.newToken(ecommerce);
 
-    const credential = await this.credentialService.createToken(ecommerce);
-
-    return credential;
+    return response;
   }
 
   async findOneById(id: string): Promise<EcommerceEntity> {

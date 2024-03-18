@@ -25,6 +25,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 @ApiTags('ecommerces')
@@ -77,6 +78,8 @@ export class EcommercesController {
   }
 
   @ApiOperation({ summary: 'Get code for an ecommerce entity.' })
+  @ApiQuery({ name: 'id', description: 'The ID of the ecommerce entity.' })
+  @ApiQuery({ name: 'code', description: 'The code of the ecommerce entity.' })
   @ApiResponse({
     status: 200,
     description: 'Return the code for the specified ecommerce entity.',
@@ -87,7 +90,11 @@ export class EcommercesController {
   @Get('/code')
   async getCode(@Query() params: { id: string; code: string }) {
     try {
-      const result = await this.ecommercesService.getCreate(params);
+      if (!params.id || !params.code) {
+        throw new HttpException('Invalid parameters', HttpStatus.BAD_REQUEST);
+      }
+
+      const result = await this.ecommercesService.codeGenerate(params);
       return result;
     } catch (error) {
       if (error instanceof NotFoundException) {

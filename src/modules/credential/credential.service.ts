@@ -37,7 +37,8 @@ export class CredentialService {
     // this.schedulerRegistry.addCronJob('refreshTokens', job);
     // job.start();
   }
-  async createToken(ecommerce: EcommerceEntity): Promise<CredentialEntity> {
+
+  async newToken(ecommerce: EcommerceEntity): Promise<CredentialEntity> {
     try {
       // Validate ecommerce entity
       if (!ecommerce) {
@@ -45,7 +46,6 @@ export class CredentialService {
       }
 
       // Fetch token from MercadoLibre API
-
       const response = await this.requestNewTokens(ecommerce);
 
       // Check if the response is successful and contains valid data
@@ -58,7 +58,6 @@ export class CredentialService {
           'Failed to retrieve valid access token',
         );
       }
-
       // Find existing credential for this ecommerce
       let existingCredential = await this.credentialRepository
         .createQueryBuilder('credential')
@@ -129,54 +128,52 @@ export class CredentialService {
     throw error;
   }
 
-  async getCrendentials(): Promise<CredentialEntity | null> {
-    const storedCredentials = await this.credentialRepository.find();
-    const storedCredential =
-      storedCredentials.length > 0 ? storedCredentials[0] : null;
-
-    return storedCredential;
+  async getCrendentials(
+    ecommerce: EcommerceEntity,
+  ): Promise<CredentialEntity | null> {
+    const storedCredential = await this.credentialRepository.findOne({
+      where: { ecommerce },
+    });
+    return storedCredential || null;
   }
 
-  async getAccessToken(): Promise<string | null> {
-    const storedCredentials = await this.credentialRepository.find();
-    const storedCredential =
-      storedCredentials.length > 0 ? storedCredentials[0] : null;
-
-    return storedCredential ? storedCredential.accessToken : null;
-  }
-
-  async getRefreshToken(): Promise<string | null> {
-    const storedCredentials = await this.credentialRepository.find();
-    const storedCredential =
-      storedCredentials.length > 0 ? storedCredentials[0] : null;
-
-    return storedCredential ? storedCredential.refreshToken : null;
-  }
-
-  async refreshTokens(refreshToken: string): Promise<AxiosResponse<any>> {
+  async refreshTokens(ecommerce: EcommerceEntity) {
     try {
+      // Obtener la credencial existente
+
+      if (!ecommerce) {
+        throw new NotFoundException('Ecommerce not found');
+      }
+
+      let existingCredential = await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.ecommerce', 'ecommerce')
+        .where('ecommerce.id = :id', { id: ecommerce.id })
+        .getOne();
+
+      // Solicitar un nuevo token utilizando el token de actualización de la credencial existente
       const response = await this.httpService
         .post('https://api.mercadolibre.com/oauth/token', {
           grant_type: 'refresh_token',
-          client_id: process.env.CLIENT_ID,
-          client_secret: process.env.CLIENT_SECRET,
-          refresh_token: refreshToken,
+          client_id: ecommerce.appId,
+          client_secret: ecommerce.clientSecret,
+          refresh_token: existingCredential.refreshToken,
         })
         .toPromise();
 
-      this.accessToken = response.data.access_token;
-      this.refreshToken = response.data.refresh_token;
+      // Actualizar la credencial existente con los nuevos tokens
+      existingCredential.accessToken = response.data.access_token;
+      existingCredential.refreshToken = response.data.refresh_token;
 
-      await this.credentialRepository.update(
-        {},
-        {
-          accessToken: this.accessToken,
-          refreshToken: this.refreshToken,
-        },
-      );
+      // Guardar la credencial actualizada en la base de datos
+      existingCredential =
+        await this.credentialRepository.save(existingCredential);
 
-      return response;
+      console.log(existingCredential);
+
+      return existingCredential;
     } catch (error) {
+      // Manejar errores
       this.handleError('Error al refrescar los tokens:', error);
       throw error;
     }

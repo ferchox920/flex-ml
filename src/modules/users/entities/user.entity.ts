@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { EcommerceEntity } from 'src/modules/ecommerces/entities/ecommerce.entity';
 import { Roles } from 'src/utils/common/roles-enum';
@@ -6,10 +14,13 @@ import { ApiProperty } from '@nestjs/swagger';
 
 @Entity({ name: 'users' })
 export class UserEntity {
-  @ApiProperty()
+  @ApiProperty({
+    example: '1',
+    description: 'The unique identifier of the user.',
+  })
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
+  
   @ApiProperty({ example: 'John' })
   @Column('character varying', { name: 'name', length: 50, nullable: true })
   name: string;
