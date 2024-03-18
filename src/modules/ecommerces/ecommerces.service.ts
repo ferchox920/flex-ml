@@ -6,6 +6,7 @@ import { EcommerceEntity } from './entities/ecommerce.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CredentialService } from '../credential/credential.service';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class EcommercesService {
@@ -15,6 +16,7 @@ export class EcommercesService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly credentialService: CredentialService,
+    private readonly httpService: HttpService,
   ) {}
 
   async createEcommerce(
@@ -35,24 +37,30 @@ export class EcommercesService {
     return await this.ecommerceRepository.save(ecommerce);
   }
 
-  async createUrl(id: string) {
-
-    const ecommerce = await this.ecommerceRepository.find();
+  async getUrlById(userId: string, id: string): Promise<string> {
+    const ecommerce = await this.ecommerceRepository.findOne({
+      where: {
+        id,
+      },
+      relations: ['user'], 
+    });
     
-    if (!ecommerce) {
-      throw new NotFoundException('Ecommerce not found');
+    if (!ecommerce || ecommerce.user.id !== userId) {
+      throw new NotFoundException('Ecommerce not found for the user');
     }
-  
-    const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${ecommerce[0].appId}&redirect_uri=${ecommerce[0].redirectUri}`;
-  
+   
     
-    
+    const url = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${ecommerce.appId}&redirect_uri=${ecommerce.redirectUri}`;
+   
     return url;
-  }
-  
-  async getCode(params: { params: string, code: string }) {
-    const ecommerce = await this.ecommerceRepository.findOne({ where: { appId: params.params } });
-    
+   }
+   
+
+  async getCreate(params: { id: string; code: string }) {
+    const ecommerce = await this.ecommerceRepository.findOne({
+      where: { appId: params.id },
+    });
+
     if (!ecommerce) {
       throw new NotFoundException('Ecommerce not found');
     }
@@ -65,8 +73,6 @@ export class EcommercesService {
 
     return credential;
   }
-  
-  
 
   async findOneById(id: string): Promise<EcommerceEntity> {
     const ecommerce = await this.ecommerceRepository.findOne({ where: { id } });
@@ -77,8 +83,10 @@ export class EcommercesService {
     return ecommerce;
   }
 
-  findAll(): Promise<EcommerceEntity[]> {
-    return this.ecommerceRepository.find();
+  findAllMyEcommerce(id: string): Promise<EcommerceEntity | undefined> {
+    console.log(id);
+
+    return this.ecommerceRepository.findOne({ where: { user: { id: id } } });
   }
 
   findOne(id: string): Promise<EcommerceEntity | undefined> {

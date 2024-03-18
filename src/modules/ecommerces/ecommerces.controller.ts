@@ -17,7 +17,15 @@ import { EcommercesService } from './ecommerces.service';
 import { CreateEcommerceDto } from './dto/create-ecommerce.dto';
 import { JwtPayload } from '../auth/interface/jwt-payload.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 
 @ApiTags('ecommerces')
 @Controller('ecommerces')
@@ -26,8 +34,13 @@ export class EcommercesController {
 
   @ApiOperation({ summary: 'Create an ecommerce entity.' })
   @ApiBearerAuth()
-  @ApiResponse({ status: 200, description: 'Return the created ecommerce entity.' })
-  @ApiBadRequestResponse({ description: 'Invalid data or missing required fields.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the created ecommerce entity.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid data or missing required fields.',
+  })
   @UseGuards(JwtAuthGuard)
   @Post()
   create(
@@ -40,28 +53,41 @@ export class EcommercesController {
     );
   }
 
-  @ApiOperation({ summary: 'Create a fallback URL for an ecommerce entity.' })
-  @ApiResponse({ status: 302, description: 'Redirect to the created fallback URL.' })
+  @ApiOperation({ summary: 'Get fallback URL for an ecommerce entity by ID.' })
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the ecommerce entity.',
+    type: String,
+  })
+  @ApiResponse({ status: 302, description: 'Redirect to the fallback URL.' })
   @ApiBadRequestResponse({ description: 'Invalid ecommerce ID.' })
-  @Post('create-code')
-  async createCode(@Response() res, @Body() id: string) {
+  @UseGuards(JwtAuthGuard)
+  @Get('get-url/:id')
+  async getUrlById(
+    @Req() req: Request & { user: JwtPayload },
+    @Param('id') id: string,
+  ) {
     try {
-      const fallbackWebURL = await this.ecommercesService.createUrl(id);
-      res.redirect(fallbackWebURL);
+      const url = await this.ecommercesService.getUrlById(req.user.id, id);
+      return url;
     } catch (error) {
       throw new HttpException({ error }, HttpStatus.BAD_REQUEST);
     }
   }
 
   @ApiOperation({ summary: 'Get code for an ecommerce entity.' })
-  @ApiResponse({ status: 200, description: 'Return the code for the specified ecommerce entity.' })
-  @ApiBadRequestResponse({ description: 'Invalid parameters or ecommerce not found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the code for the specified ecommerce entity.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid parameters or ecommerce not found.',
+  })
   @Get('/code')
-  async getCode(
-    @Query() params: { params: string; code: string },
-  ) {
+  async getCode(@Query() params: { id: string; code: string }) {
     try {
-      const result = await this.ecommercesService.getCode(params);
+      const result = await this.ecommercesService.getCreate(params);
       return result;
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -76,9 +102,14 @@ export class EcommercesController {
   }
 
   @ApiOperation({ summary: 'Get a list of all ecommerce entities.' })
-  @ApiResponse({ status: 200, description: 'Return a list of ecommerce entities.' })
-  @Get()
-  findAll() {
-    return this.ecommercesService.findAll();
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Return a list of ecommerce entities.',
+  })
+  @UseGuards(JwtAuthGuard)
+  @Get('all-ecommerces')
+  async findAllMyEcommerce(@Req() req: Request & { user: JwtPayload }) {
+    return this.ecommercesService.findAllMyEcommerce(req.user.id);
   }
 }
