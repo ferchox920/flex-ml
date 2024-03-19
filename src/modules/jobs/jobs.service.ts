@@ -13,7 +13,7 @@ export class JobsService {
     private readonly credentialService: CredentialService,
   ) {}
 
-  @Cron(CronExpression.EVERY_2_HOURS)
+  @Cron(CronExpression.EVERY_3_HOURS)
   async handleTokenRefresh() {
     try {
       const credentials = await this.credentialRepository.find({

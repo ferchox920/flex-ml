@@ -5,8 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
-import { CronJob } from 'cron';
-// import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CredentialEntity } from './entities/credential.entity';
@@ -18,25 +16,13 @@ dotenv.config();
 
 @Injectable()
 export class CredentialService {
-  private accessToken: string;
-  private refreshToken: string;
-
   constructor(
     private readonly httpService: HttpService,
     @InjectRepository(EcommerceEntity)
     private readonly ecommerceRepository: Repository<EcommerceEntity>,
     @InjectRepository(CredentialEntity)
     private readonly credentialRepository: Repository<CredentialEntity>,
-  ) {
-    // Comenté esta parte porque inicializar los tokens directamente podría no ser necesario en el constructor
-    // this.initTokens();
-    // Comenté la configuración del cron job ya que no estaba siendo utilizado en el código proporcionado
-    // const job = new CronJob('0 0 */5 * * *', async () => {
-    //   await this.refreshTokens(this.refreshToken);
-    // });
-    // this.schedulerRegistry.addCronJob('refreshTokens', job);
-    // job.start();
-  }
+  ) {}
 
   async newToken(ecommerce: EcommerceEntity): Promise<CredentialEntity> {
     try {
@@ -64,7 +50,7 @@ export class CredentialService {
         .leftJoinAndSelect('credential.ecommerce', 'ecommerce')
         .where('ecommerce.id = :id', { id: ecommerce.id })
         .getOne();
-        
+
       // Update or create credential based on existence
       if (existingCredential) {
         existingCredential.accessToken = response.data.access_token;
@@ -110,7 +96,6 @@ export class CredentialService {
         .toPromise();
     } catch (error) {
       if (error.response && error.response.status === 400) {
-        // Handle the specific error caused by invalid or expired tokens
         console.error('Invalid or expired tokens:', error.response.data);
         throw new BadRequestException('Invalid or expired tokens');
       } else {
@@ -137,10 +122,8 @@ export class CredentialService {
     return storedCredential || null;
   }
 
-  async refreshTokens(ecommerce: EcommerceEntity) {
+  async refreshTokens(ecommerce: EcommerceEntity): Promise<CredentialEntity> {
     try {
-      // Obtener la credencial existente
-
       if (!ecommerce) {
         throw new NotFoundException('Ecommerce not found');
       }
@@ -168,9 +151,6 @@ export class CredentialService {
       // Guardar la credencial actualizada en la base de datos
       existingCredential =
         await this.credentialRepository.save(existingCredential);
-
-      console.log(existingCredential);
-
       return existingCredential;
     } catch (error) {
       // Manejar errores

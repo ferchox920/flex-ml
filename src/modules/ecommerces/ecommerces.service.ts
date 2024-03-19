@@ -100,10 +100,10 @@ export class EcommercesService {
     return ecommerce;
   }
 
-  findAllMyEcommerce(id: string): Promise<EcommerceEntity | undefined> {
+  findAllMyEcommerce(id: string): Promise<EcommerceEntity[] | undefined> {
     console.log(id);
 
-    return this.ecommerceRepository.findOne({ where: { user: { id: id } } });
+    return this.ecommerceRepository.find({ where: { user: { id: id } } });
   }
 
   findOne(id: string): Promise<EcommerceEntity | undefined> {
