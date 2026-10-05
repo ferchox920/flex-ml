@@ -72,3 +72,10 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 
 Nest is [MIT licensed](LICENSE).
 # flex-ml
+
+
+## Configuración local del entorno
+
+Copiá `.env.example` a `.env` en la raíz y completá las credenciales de tu entorno. La plantilla conserva los nombres de las variables y usa ejemplos locales; los secretos quedan vacíos. Generá secretos propios y no subas archivos `.env` a Git.
+
+Si usaste credenciales de versiones anteriores, revocalas o rotalas: reemplazar el archivo no elimina los valores del historial de Git.
